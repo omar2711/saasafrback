@@ -10,6 +10,7 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { DbService } from '../../../database/db.service';
 import { resolveIsSuperAdmin } from '../../../common/auth/super-admin';
+import { getCorsOrigins } from '../../../common/config/cors';
 import {
   SupportTicketEntity,
   SupportTicketMessageEntity,
@@ -45,11 +46,7 @@ interface SocketState {
 @WebSocketGateway({
   namespace: '/support',
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
-    ],
+    origin: getCorsOrigins(),
     credentials: true,
   },
 })
