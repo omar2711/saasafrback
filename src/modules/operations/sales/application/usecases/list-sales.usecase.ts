@@ -106,7 +106,7 @@ export class ListSalesUseCase {
          LEFT JOIN customers c ON c.id = s.customer_id
          LEFT JOIN users u ON u.id = s.sold_by
          WHERE ${conditions.join(' AND ')}
-         ORDER BY s.created_at DESC
+         ORDER BY s.created_at DESC, s.id DESC
          ${pagination}`,
         params,
       ),

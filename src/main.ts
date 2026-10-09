@@ -9,6 +9,11 @@ import { json } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
   app.use(json({ limit: '1mb' }));
+  app.use((_request, response, next) => {
+    response.setHeader('Cache-Control', 'private, no-store');
+    response.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+    next();
+  });
   app.enableCors({
     origin: [
       'http://localhost:3000',
@@ -16,7 +21,8 @@ async function bootstrap() {
       ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-cache-bypass'],
+    exposedHeaders: ['X-App-Cache'],
     credentials: true,
   });
   app.useGlobalPipes(

@@ -11,10 +11,12 @@ import { SalesModule } from './sales/sales.module';
 import { SaleReturnsModule } from './sale-returns/sale-returns.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { TransfersModule } from './transfers/transfers.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
     SuppliersModule,
+    ReportsModule,
     CustomersModule,
     CategoriesModule,
     ProductsModule,

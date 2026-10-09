@@ -74,7 +74,7 @@ export class ListQuotesUseCase {
          FROM quotes q
          LEFT JOIN branches b ON b.id = q.branch_id
          WHERE ${conditions.join(' AND ')}
-         ORDER BY q.created_at DESC
+         ORDER BY q.created_at DESC, q.id DESC
          ${pagination}`,
         params,
       ),

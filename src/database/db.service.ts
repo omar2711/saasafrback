@@ -33,7 +33,21 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit(): Promise<void> {
-    this.pool = new Pool({ connectionString: this.config.get<string>('DATABASE_URL') });
+    const integer = (key: string, fallback: number) => {
+      const value = Number(this.config.get(key) ?? fallback);
+      if (!Number.isInteger(value) || value < 1) throw new Error(`${key} must be a positive integer`);
+      return value;
+    };
+    this.pool = new Pool({
+      connectionString: this.config.get<string>('DATABASE_URL'),
+      max: integer('DB_POOL_MAX', process.env.VERCEL ? 5 : 10),
+      connectionTimeoutMillis: integer('DB_CONNECTION_TIMEOUT_MS', 5000),
+      idleTimeoutMillis: integer('DB_IDLE_TIMEOUT_MS', 30000),
+      statement_timeout: integer('DB_STATEMENT_TIMEOUT_MS', 15000),
+      idle_in_transaction_session_timeout: integer('DB_TRANSACTION_IDLE_TIMEOUT_MS', 15000),
+      application_name: 'afr-sales',
+    });
+    this.pool.on('error', () => { console.error('PostgreSQL idle connection failed'); });
   }
 
   async onModuleDestroy(): Promise<void> {

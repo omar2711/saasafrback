@@ -93,7 +93,7 @@ export class ListInventoryMovementsUseCase {
          LEFT JOIN products p ON p.id = m.product_id
          LEFT JOIN users u ON u.id = m.created_by
          WHERE ${where.join(' AND ')}
-         ORDER BY m.created_at DESC
+         ORDER BY m.created_at DESC, m.id DESC
          ${pagination}`,
         params,
       ),

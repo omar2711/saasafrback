@@ -1,6 +1,7 @@
 ﻿import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { ParseUUIDPipe } from '@nestjs/common';
+import { ParseUUIDPipe, Query } from '@nestjs/common';
+import { ListProductsDto } from './dto/list-products.dto';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { Tenant } from '../../../../common/decorators/tenant.decorator';
 import type { JwtUser } from '../../../../common/auth/jwt-user';
@@ -48,8 +49,8 @@ export class ProductsController {
   @Get()
   @Permissions('products.read')
   @ApiOperation({ summary: 'Listar productos' })
-  list(@CurrentUser() user: JwtUser, @Tenant() tenant: TenantContext) {
-    return this.listProductsUseCase.execute(buildRlsContext(user, tenant));
+  list(@CurrentUser() user: JwtUser, @Tenant() tenant: TenantContext, @Query() query: ListProductsDto) {
+    return this.listProductsUseCase.execute(buildRlsContext(user, tenant), query);
   }
 
   @Get('deleted')

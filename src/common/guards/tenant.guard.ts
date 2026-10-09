@@ -165,6 +165,9 @@ export class TenantGuard implements CanActivate {
     if (!isSuperAdmin) {
       const path = request.path ?? request.url ?? '';
       const modules: [string, string][] = [
+        ['/operations/reports/sales', 'module_sales'],
+        ['/operations/reports/quotes', 'module_quotes'],
+        ['/operations/reports/inventory', 'module_inventory'],
         ['/operations/inventory/transfers', 'module_transfers'],
         ['/operations/pricing', 'module_inventory'],
         ['/operations/products', 'module_inventory'],

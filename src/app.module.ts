@@ -12,11 +12,13 @@ import { IamModule } from './modules/iam/iam.module';
 import { OperationsModule } from './modules/operations/operations.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SupportModule } from './modules/support/support.module';
+import { PrivateCacheModule } from './common/cache/private-cache.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    PrivateCacheModule,
     AdminModule,
     AuthModule,
     AuditModule,

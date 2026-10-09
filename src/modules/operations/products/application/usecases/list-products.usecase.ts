@@ -2,6 +2,7 @@
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNullableNumber, toNumber } from '../../../../../common/utils/numbers';
 import { ProductEntity } from '../../domain/entities/product.entity';
+import { ListProductsDto } from '../../presentation/dto/list-products.dto';
 
 interface ProductRow {
   id: string;
@@ -26,12 +27,20 @@ interface ProductRow {
 export class ListProductsUseCase {
   constructor(private readonly db: DbService) {}
 
-  async execute(context: RlsContext): Promise<ProductEntity[]> {
+  async execute(context: RlsContext, filter: ListProductsDto = {}): Promise<ProductEntity[]> {
     const orgId = context.orgId;
     if (!orgId) {
       throw new ForbiddenException('Tenant context missing');
     }
 
+    const conditions = ['p.org_id = $1', 'p.deleted_at IS NULL'];
+    const params: unknown[] = [orgId];
+    if (filter.search?.trim()) {
+      params.push(`%${filter.search.trim()}%`);
+      conditions.push(`(p.name ILIKE $${params.length} OR p.sku ILIKE $${params.length})`);
+    }
+    if (filter.status) { params.push(filter.status); conditions.push(`p.status = $${params.length}`); }
+    params.push(Math.min(filter.limit ?? 200, 500), filter.offset ?? 0);
     const products = await this.db.withRls(context, (client) =>
       client.query<ProductRow>(
         `SELECT p.id, p.org_id, p.sku, p.name,
@@ -39,9 +48,10 @@ export class ListProductsUseCase {
                 p.category_id, p.description, p.sale_price, p.cost_price, p.min_sale_price, p.max_sale_price, p.unit, p.image_url, p.status, p.created_at, p.updated_at
          FROM products p
          LEFT JOIN product_categories pc ON pc.id = p.category_id
-         WHERE p.org_id = $1 AND p.deleted_at IS NULL
-         ORDER BY p.created_at DESC`,
-        [orgId],
+         WHERE ${conditions.join(' AND ')}
+         ORDER BY p.created_at DESC, p.id DESC
+         LIMIT $${params.length - 1} OFFSET $${params.length}`,
+        params,
       ),
     );
 
