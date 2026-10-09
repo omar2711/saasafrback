@@ -5,6 +5,7 @@ import { ApiExceptionFilter } from './common/errors/api-exception.filter';
 import { buildValidationException } from './common/errors/validation-messages';
 import { AppModule } from './app.module';
 import { json } from 'express';
+import { getCorsOptions } from './common/config/cors';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bodyParser: false });
@@ -14,17 +15,7 @@ async function bootstrap() {
     response.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     next();
   });
-  app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : []),
-    ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-cache-bypass'],
-    exposedHeaders: ['X-App-Cache'],
-    credentials: true,
-  });
+  app.enableCors(getCorsOptions());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
