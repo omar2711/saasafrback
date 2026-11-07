@@ -66,14 +66,13 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
   async withRls<T>(context: RlsContext, callback: (client: DbClient) => Promise<T>): Promise<T> {
     const poolClient = await this.pool.connect();
     const client = wrapClient(poolClient);
+    const lit = (v: string | null | undefined) =>
+      v == null ? 'NULL' : poolClient.escapeLiteral(v);
     try {
-      await poolClient.query('BEGIN');
-      await poolClient.query('SELECT app.set_context($1::uuid, $2::uuid, $3::uuid, $4)', [
-        context.userId ?? null,
-        context.orgId ?? null,
-        context.memberId ?? null,
-        context.isSuperAdmin ?? false,
-      ]);
+      // BEGIN y contexto en un solo viaje a la base.
+      await poolClient.query(
+        `BEGIN; SELECT app.set_context(${lit(context.userId)}::uuid, ${lit(context.orgId)}::uuid, ${lit(context.memberId)}::uuid, ${context.isSuperAdmin ? 'true' : 'false'})`,
+      );
       const result = await callback(client);
       await poolClient.query('COMMIT');
       return result;
@@ -84,7 +83,6 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
       poolClient.release();
     }
   }
-
   async transaction<T>(callback: (client: DbClient) => Promise<T>): Promise<T> {
     const poolClient = await this.pool.connect();
     const client = wrapClient(poolClient);
@@ -110,22 +108,21 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     const poolClient = await this.pool.connect();
     const client = wrapClient(poolClient);
     try {
-      await poolClient.query('BEGIN');
+      // BEGIN y variables de contexto en un solo viaje a la base.
       await poolClient.query(
-        `SELECT set_config('app.user_id', $1, true),
-                set_config('app.org_id', $2, true),
+        `BEGIN; SELECT set_config('app.user_id', ${poolClient.escapeLiteral(userId ?? '')}, true),
+                set_config('app.org_id', ${poolClient.escapeLiteral(orgId ?? '')}, true),
                 set_config('app.member_id', '', true),
-                set_config('app.is_super_admin', $3, true)`,
-        [userId ?? '', orgId ?? '', isSuperAdmin ? 'true' : 'false'],
+                set_config('app.is_super_admin', '${isSuperAdmin ? 'true' : 'false'}', true)`,
       );
-      const result = await callback(client);
-      await poolClient.query('ROLLBACK');
-      return result;
-    } catch (err) {
-      await poolClient.query('ROLLBACK');
-      throw err;
+      return await callback(client);
     } finally {
-      poolClient.release();
+      // Solo lectura: el ROLLBACK no se espera para responder. El cliente no
+      // vuelve al pool hasta que termina, así que nadie lo reutiliza antes.
+      poolClient.query('ROLLBACK').then(
+        () => poolClient.release(),
+        (err: Error) => poolClient.release(err),
+      );
     }
   }
 }

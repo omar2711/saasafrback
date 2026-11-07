@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DbService } from '../../database/db.service';
+import { TtlCache } from '../cache/ttl-cache';
 
 export interface WorkScheduleCheck {
   allowed: boolean;
@@ -28,6 +29,9 @@ interface MembershipRow {
  * 031) con now() AT TIME ZONE o.timezone. Node no necesita ninguna libreria de
  * zonas horarias y la hora es la misma para cualquier proceso que consulte.
  */
+// El horario casi no cambia: 15 s evitan 4 viajes a la base por petición.
+const scheduleCache = new TtlCache<WorkScheduleCheck>(15_000);
+
 @Injectable()
 export class WorkScheduleService {
   constructor(private readonly db: DbService) {}
@@ -89,7 +93,7 @@ export class WorkScheduleService {
 
   /** Bloqueo de una sesion ya abierta, desde TenantGuard. */
   async assertCanOperate(orgId: string, userId: string): Promise<void> {
-    const check = await this.check(orgId, userId);
+    const check = await scheduleCache.get(`:`, () => this.check(orgId, userId));
     if (check.allowed) {
       return;
     }
