@@ -224,7 +224,7 @@ export class AdminService {
           [org.id, owner.id],
         );
         const [role] = await c.query<Row>(
-          `INSERT INTO roles(org_id,name,is_system) VALUES($1,'Gerente',true) RETURNING id`,
+          `INSERT INTO roles(org_id,name,is_system) VALUES($1,'Propietario',true) RETURNING id`,
           [org.id],
         );
         await c.execute(

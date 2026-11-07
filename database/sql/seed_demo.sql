@@ -1,4 +1,4 @@
-﻿-- =============================================================================
+-- =============================================================================
 -- SEED DEMO: Tecnología Andina SRL
 -- Empresa ficticia boliviana de venta de tecnología
 -- 5 usuarios, 2 sucursales, datos operativos completos
@@ -256,7 +256,7 @@ ON CONFLICT (code) DO NOTHING;
 -- =============================================================================
 INSERT INTO roles (id, org_id, name, is_system)
 VALUES
-  ('4e000001-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 'Gerente',        true),
+  ('4e000001-0000-0000-0000-000000000001', '11111111-0000-0000-0000-000000000001', 'Propietario',    true),
   ('4e000001-0000-0000-0000-000000000002', '11111111-0000-0000-0000-000000000001', 'Administrador',  true),
   ('4e000001-0000-0000-0000-000000000003', '11111111-0000-0000-0000-000000000001', 'Vendedor',       true),
   ('4e000001-0000-0000-0000-000000000004', '11111111-0000-0000-0000-000000000001', 'Almacenero',     true)
@@ -336,7 +336,7 @@ INSERT INTO user_roles (org_member_id, role_id)
 SELECT om.id, r.id
 FROM org_members om
 JOIN users u ON om.user_id = u.id
-JOIN roles r ON r.org_id = om.org_id AND r.name = 'Gerente'
+JOIN roles r ON r.org_id = om.org_id AND r.name = 'Propietario'
 WHERE u.email = 'gerente@tecnologiaandina.bo'
   AND om.org_id = '11111111-0000-0000-0000-000000000001'
 ON CONFLICT DO NOTHING;
@@ -1075,7 +1075,7 @@ ON CONFLICT DO NOTHING;
 -- Tenant ID (x-tenant-id): 11111111-0000-0000-0000-000000000001
 --
 -- USUARIOS:
---   gerente@tecnologiaandina.bo  / Password123!  → Gerente (acceso total)
+--   gerente@tecnologiaandina.bo  / Password123!  → Propietario (acceso total)
 --   admin@tecnologiaandina.bo    / Password123!  → Administrador
 --   vendedor1@tecnologiaandina.bo / Password123! → Vendedor
 --   vendedor2@tecnologiaandina.bo / Password123! → Vendedor

@@ -37,7 +37,7 @@ export function isWithinRange(unitPrice: number, range: PriceRange): boolean {
  * muestra el mensaje completo y el vendedor corrige todo de una vez.
  *
  * Se lanza 403 y no 400 porque no es un dato mal formado: es una operacion que
- * el usuario no tiene permitida y que otro (el Gerente) si podria hacer.
+ * el usuario no tiene permitida y que otro (el Propietario) si podria hacer.
  */
 export function assertPricesWithinRange(
   violations: PriceRangeViolation[],
