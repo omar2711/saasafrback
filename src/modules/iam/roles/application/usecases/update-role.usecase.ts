@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { RoleEntity } from '../../domain/entities/role.entity';
 import { UpdateRoleDto } from '../../presentation/dto/update-role.dto';
@@ -22,6 +22,14 @@ export class UpdateRoleUseCase {
 
   async execute(context: RlsContext, roleId: string, dto: UpdateRoleDto): Promise<RoleEntity> {
     const result = await this.db.withRls(context, async (client) => {
+      const current = await client.query<RoleRow>(
+        'SELECT id, org_id, name, is_system, created_at, updated_at FROM roles WHERE id = $1',
+        [roleId],
+      );
+      if (current[0]?.is_system && current[0].name === 'Propietario') {
+        throw new ForbiddenException('El rol Propietario siempre tiene acceso total y no se puede modificar.');
+      }
+
       const roles = await client.query<RoleRow>(
         `UPDATE roles SET name = $1 WHERE id = $2
          RETURNING id, org_id, name, is_system, created_at, updated_at`,

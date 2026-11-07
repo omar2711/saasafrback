@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { AuditService } from '../../../../../common/audit/audit.service';
 import { RoleEntity } from '../../domain/entities/role.entity';
@@ -31,7 +31,9 @@ export class AssignRolePermissionUseCase {
         [roleId],
       );
       if (!roles[0]) return null;
-
+      if (roles[0].is_system && roles[0].name === 'Propietario') {
+        throw new ForbiddenException('El rol Propietario siempre tiene acceso total y no se puede modificar.');
+      }
       await client.execute(
         `INSERT INTO role_permissions (role_id, permission_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [roleId, dto.permissionId],
