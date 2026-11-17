@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CommonModule } from '../../../common/common.module';
 import { DatabaseModule } from '../../../database/database.module';
 import { CreateUserUseCase } from './application/usecases/create-user.usecase';
+import { DeleteUserUseCase } from './application/usecases/delete-user.usecase';
 import { GetUserUseCase } from './application/usecases/get-user.usecase';
 import { ListUsersUseCase } from './application/usecases/list-users.usecase';
 import { SetUserStatusUseCase } from './application/usecases/set-user-status.usecase';
@@ -17,6 +18,7 @@ import { UsersController } from './presentation/users.controller';
     GetUserUseCase,
     UpdateUserUseCase,
     SetUserStatusUseCase,
+    DeleteUserUseCase,
   ],
 })
 export class UsersModule {}

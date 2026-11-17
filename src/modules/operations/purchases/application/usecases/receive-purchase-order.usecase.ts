@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNumber } from '../../../../../common/utils/numbers';
 import { PurchaseOrderEntity } from '../../domain/entities/purchase-order.entity';
@@ -30,6 +30,7 @@ interface PurchaseOrderItemRow {
   quantity: string;
   unit_cost: string;
   total_cost: string;
+  expiration_date: string | null;
   created_at: Date;
 }
 
@@ -59,7 +60,8 @@ export class ReceivePurchaseOrderUseCase {
       }
 
       const items = await client.query<PurchaseOrderItemRow>(
-        `SELECT id, org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost, created_at
+        `SELECT id, org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost,
+                to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date, created_at
          FROM purchase_order_items
          WHERE purchase_order_id = $1`,
         [orderId],
@@ -94,6 +96,14 @@ export class ReceivePurchaseOrderUseCase {
            VALUES ($1, $2, $3, 'purchase', $4, $5, $6, 'purchase_order', $7)`,
           [order.org_id, order.branch_id, item.product_id, qty, unitCost, qty * unitCost, orderId],
         );
+
+        // El producto guarda una sola fecha: se actualiza con la del lote recibido.
+        if (item.expiration_date) {
+          await client.execute(
+            `UPDATE products SET expiration_date = $2::date WHERE id = $1`,
+            [item.product_id, item.expiration_date],
+          );
+        }
       }
 
       return { order: updated, items };
@@ -112,6 +122,7 @@ export class ReceivePurchaseOrderUseCase {
       quantity: toNumber(item.quantity),
       unitCost: toNumber(item.unit_cost),
       totalCost: toNumber(item.total_cost),
+      expirationDate: item.expiration_date ?? null,
       createdAt: item.created_at.toISOString(),
     }));
 

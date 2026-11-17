@@ -41,7 +41,7 @@ export class CreateUserUseCase {
         // organizacion, pero con un 500 opaco en vez de un motivo.
         if (roleIds.length > 0) {
           const found = await client.query<{ id: string }>(
-            `SELECT id FROM roles WHERE id = ANY($1::uuid[]) AND org_id = $2`,
+            `SELECT id FROM roles WHERE id = ANY($1::uuid[]) AND org_id = $2 AND deleted_at IS NULL`,
             [roleIds, orgId],
           );
           if (found.length !== roleIds.length) {

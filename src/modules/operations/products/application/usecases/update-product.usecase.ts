@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { AuditService } from '../../../../../common/audit/audit.service';
 import { toNullableNumber, toNumber } from '../../../../../common/utils/numbers';
@@ -19,6 +19,7 @@ interface ProductRow {
   max_sale_price: string | null;
   unit: string | null;
   image_url: string | null;
+  expiration_date: string | null;
   status: string;
   created_at: Date;
   updated_at: Date;
@@ -42,7 +43,7 @@ export class UpdateProductUseCase {
       // Valor anterior para la auditoria de precios, en la misma transaccion.
       const [before] = await client.query<ProductRow>(
         `SELECT id, org_id, sku, name, category, category_id, description, sale_price, cost_price,
-                min_sale_price, max_sale_price, unit, image_url, status, created_at, updated_at
+                min_sale_price, max_sale_price, unit, image_url, status, to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date, created_at, updated_at
          FROM products WHERE id = $1`,
         [productId],
       );
@@ -67,6 +68,7 @@ export class UpdateProductUseCase {
              max_sale_price = CASE WHEN $15::boolean THEN $16::numeric ELSE max_sale_price END,
              unit = COALESCE($7::text, unit),
              image_url = COALESCE($8::text, image_url),
+             expiration_date = CASE WHEN $17::boolean THEN $18::date ELSE expiration_date END,
              status = COALESCE(
                $9::text,
                CASE
@@ -75,7 +77,7 @@ export class UpdateProductUseCase {
                END
              )
          WHERE id = $10
-         RETURNING id, org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status, created_at, updated_at`,
+         RETURNING id, org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status, to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date, created_at, updated_at`,
         [
           dto.sku ?? null,
           dto.name ?? null,
@@ -93,6 +95,8 @@ export class UpdateProductUseCase {
           dto.minSalePrice ?? null,
           dto.maxSalePrice !== undefined,
           dto.maxSalePrice ?? null,
+          dto.expirationDate !== undefined,
+          dto.expirationDate ?? null,
         ],
       );
 
@@ -152,6 +156,7 @@ export class UpdateProductUseCase {
       maxSalePrice: toNullableNumber(product.max_sale_price),
       unit: product.unit ?? null,
       imageUrl: product.image_url ?? null,
+      expirationDate: product.expiration_date ?? null,
       status: product.status as ProductEntity['status'],
       createdAt: product.created_at.toISOString(),
       updatedAt: product.updated_at.toISOString(),

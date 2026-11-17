@@ -1,4 +1,4 @@
-﻿import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNullableNumber, toNumber } from '../../../../../common/utils/numbers';
 import { ProductEntity } from '../../domain/entities/product.entity';
@@ -18,6 +18,7 @@ interface ProductRow {
   max_sale_price: string | null;
   unit: string | null;
   image_url: string | null;
+  expiration_date: string | null;
   status: string;
   created_at: Date;
   updated_at: Date;
@@ -45,7 +46,7 @@ export class ListProductsUseCase {
       client.query<ProductRow>(
         `SELECT p.id, p.org_id, p.sku, p.name,
                 COALESCE(pc.name, p.category) AS category,
-                p.category_id, p.description, p.sale_price, p.cost_price, p.min_sale_price, p.max_sale_price, p.unit, p.image_url, p.status, p.created_at, p.updated_at
+                p.category_id, p.description, p.sale_price, p.cost_price, p.min_sale_price, p.max_sale_price, p.unit, p.image_url, p.status, to_char(p.expiration_date, 'YYYY-MM-DD') AS expiration_date, p.created_at, p.updated_at
          FROM products p
          LEFT JOIN product_categories pc ON pc.id = p.category_id
          WHERE ${conditions.join(' AND ')}
@@ -69,6 +70,7 @@ export class ListProductsUseCase {
       maxSalePrice: toNullableNumber(product.max_sale_price),
       unit: product.unit ?? null,
       imageUrl: product.image_url ?? null,
+      expirationDate: product.expiration_date ?? null,
       status: product.status as ProductEntity['status'],
       createdAt: product.created_at.toISOString(),
       updatedAt: product.updated_at.toISOString(),

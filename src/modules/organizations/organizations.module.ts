@@ -11,6 +11,12 @@ import { UpdateBranchUseCase } from './application/usecases/update-branch.usecas
 import { UpdateOrganizationUseCase } from './application/usecases/update-organization.usecase';
 import { GetWorkScheduleUseCase } from './application/usecases/get-work-schedule.usecase';
 import { UpdateWorkScheduleUseCase } from './application/usecases/update-work-schedule.usecase';
+import {
+  GetSystemSettingsUseCase,
+  UpdateSystemSettingsUseCase,
+  ListExchangeRatesUseCase,
+  SetExchangeRateUseCase,
+} from './application/usecases/system-settings.usecases';
 import { BranchesController } from './presentation/branches.controller';
 import { OrganizationsController } from './presentation/organizations.controller';
 
@@ -28,6 +34,10 @@ import { OrganizationsController } from './presentation/organizations.controller
     GetMyBranchUseCase,
     GetWorkScheduleUseCase,
     UpdateWorkScheduleUseCase,
+    GetSystemSettingsUseCase,
+    UpdateSystemSettingsUseCase,
+    ListExchangeRatesUseCase,
+    SetExchangeRateUseCase,
   ],
 })
 export class OrganizationsModule {}

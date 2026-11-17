@@ -20,6 +20,13 @@ import { UpdateWorkScheduleUseCase } from '../application/usecases/update-work-s
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { UpdateWorkScheduleDto } from './dto/update-work-schedule.dto';
+import { UpdateSystemSettingsDto, SetExchangeRateDto } from './dto/system-settings.dto';
+import {
+  GetSystemSettingsUseCase,
+  UpdateSystemSettingsUseCase,
+  ListExchangeRatesUseCase,
+  SetExchangeRateUseCase,
+} from '../application/usecases/system-settings.usecases';
 
 @ApiTags('Organizations')
 @ApiBearerAuth()
@@ -34,6 +41,10 @@ export class OrganizationsController {
     private readonly getMyBranchUseCase: GetMyBranchUseCase,
     private readonly getWorkScheduleUseCase: GetWorkScheduleUseCase,
     private readonly updateWorkScheduleUseCase: UpdateWorkScheduleUseCase,
+    private readonly getSystemSettingsUseCase: GetSystemSettingsUseCase,
+    private readonly updateSystemSettingsUseCase: UpdateSystemSettingsUseCase,
+    private readonly listExchangeRatesUseCase: ListExchangeRatesUseCase,
+    private readonly setExchangeRateUseCase: SetExchangeRateUseCase,
   ) {}
 
   @Post()
@@ -57,13 +68,15 @@ export class OrganizationsController {
     @Tenant() tenant: TenantContext,
     @Req() req: Request & { permissions?: string[]; planFeatures?: string[] },
   ) {
-    const { assignedBranchId } = await this.getMyBranchUseCase.execute(
+    const { assignedBranchId, userName, roleNames } = await this.getMyBranchUseCase.execute(
       buildRlsContext(user, tenant),
     );
     return {
       permissions: req.permissions ?? [],
       planFeatures: req.planFeatures ?? [],
       assignedBranchId,
+      userName,
+      roleNames,
     };
   }
 
@@ -86,6 +99,48 @@ export class OrganizationsController {
     @Body() dto: UpdateWorkScheduleDto,
   ) {
     return this.updateWorkScheduleUseCase.execute(buildRlsContext(user, tenant), dto);
+  }
+
+  @Get('system-settings')
+  @UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
+  @ApiHeader({ name: 'x-tenant-id', description: 'ID de la organizacion', required: true })
+  @ApiOperation({ summary: 'Configuracion del sistema: impuesto y moneda' })
+  getSystemSettings(@CurrentUser() user: JwtUser, @Tenant() tenant: TenantContext) {
+    return this.getSystemSettingsUseCase.execute(buildRlsContext(user, tenant));
+  }
+
+  @Patch('system-settings')
+  @UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
+  @Permissions('settings.write')
+  @ApiHeader({ name: 'x-tenant-id', description: 'ID de la organizacion', required: true })
+  @ApiOperation({ summary: 'Actualizar impuesto y moneda del sistema' })
+  updateSystemSettings(
+    @CurrentUser() user: JwtUser,
+    @Tenant() tenant: TenantContext,
+    @Body() dto: UpdateSystemSettingsDto,
+  ) {
+    return this.updateSystemSettingsUseCase.execute(buildRlsContext(user, tenant), dto);
+  }
+
+  @Get('exchange-rates')
+  @UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
+  @ApiHeader({ name: 'x-tenant-id', description: 'ID de la organizacion', required: true })
+  @ApiOperation({ summary: 'Tipos de cambio (historial por dia)' })
+  listExchangeRates(@CurrentUser() user: JwtUser, @Tenant() tenant: TenantContext) {
+    return this.listExchangeRatesUseCase.execute(buildRlsContext(user, tenant));
+  }
+
+  @Post('exchange-rates')
+  @UseGuards(JwtAuthGuard, TenantGuard, PermissionsGuard)
+  @Permissions('settings.write')
+  @ApiHeader({ name: 'x-tenant-id', description: 'ID de la organizacion', required: true })
+  @ApiOperation({ summary: 'Guardar el tipo de cambio de un dia' })
+  setExchangeRate(
+    @CurrentUser() user: JwtUser,
+    @Tenant() tenant: TenantContext,
+    @Body() dto: SetExchangeRateDto,
+  ) {
+    return this.setExchangeRateUseCase.execute(buildRlsContext(user, tenant), dto);
   }
 
   @Get(':id')

@@ -376,11 +376,12 @@ export class CreateSaleUseCase {
         });
       }
 
-      if (dto.paymentMethod) {
+      // Una venta a credito no se cobra al registrarla: queda con saldo pendiente
+      if (dto.paymentMethod && dto.paymentMethod !== 'credit') {
         await client.execute(
           `INSERT INTO payments (org_id, sale_id, amount, method, status, paid_at)
            VALUES ($1, $2, $3, $4, 'completed', now())`,
-          [orgId, sale.id, total, dto.paymentMethod === 'credit' ? 'other' : dto.paymentMethod],
+          [orgId, sale.id, total, dto.paymentMethod],
         );
       }
 

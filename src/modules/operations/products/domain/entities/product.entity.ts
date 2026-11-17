@@ -15,6 +15,7 @@ export interface ProductEntity {
   maxSalePrice?: number | null;
   unit?: string | null;
   imageUrl?: string | null;
+  expirationDate?: string | null;
   status: ProductStatus;
   createdAt: string;
   updatedAt: string;

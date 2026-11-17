@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, IsUUID, Min, MinLength, IsDateString } from 'class-validator';
 
 export class UpdateProductDto {
   @ApiPropertyOptional({ example: 'SKU-002' })
@@ -76,4 +76,12 @@ export class UpdateProductDto {
   @IsNumber()
   @Min(0)
   maxSalePrice?: number | null;
+
+
+
+  @ApiPropertyOptional({ example: '2026-12-31', description: 'Fecha de vencimiento (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsDateString()
+  expirationDate?: string | null;
+
 }

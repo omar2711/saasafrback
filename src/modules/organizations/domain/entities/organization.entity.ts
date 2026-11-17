@@ -11,6 +11,8 @@ export interface OrganizationEntity {
   email?: string | null;
   /** Condiciones que se imprimen en el comprobante de una venta adelantada. */
   advanceSaleTerms?: string | null;
+  /** true cuando los datos de la empresa ya se cargaron y no se pueden editar. */
+  profileLocked?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -12,6 +12,7 @@ interface OrgRow {
   phone: string | null;
   email: string | null;
   advance_sale_terms: string | null;
+  profile_locked: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -28,7 +29,7 @@ export class GetOrganizationUseCase {
     const orgs = await this.db.withRls(context, (client) =>
       client.query<OrgRow>(
         `SELECT id, name, tax_id, timezone, status, address, phone, email, advance_sale_terms,
-                created_at, updated_at
+                profile_locked, created_at, updated_at
          FROM orgs WHERE id = $1`,
         [id],
       ),
@@ -49,6 +50,7 @@ export class GetOrganizationUseCase {
       phone: org.phone ?? null,
       email: org.email ?? null,
       advanceSaleTerms: org.advance_sale_terms ?? null,
+      profileLocked: org.profile_locked,
       createdAt: org.created_at.toISOString(),
       updatedAt: org.updated_at.toISOString(),
     };

@@ -17,6 +17,7 @@ export const AUDIT_ACTIONS = [
   'price.change',
   'user.create',
   'user.status_change',
+  'user.delete',
   'role.change',
 ] as const;
 

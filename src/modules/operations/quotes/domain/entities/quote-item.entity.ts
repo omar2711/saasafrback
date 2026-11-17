@@ -5,6 +5,9 @@ export interface QuoteItemEntity {
   productId: string | null;
   kitId?: string | null;
   kitName?: string | null;
+  productName?: string | null;
+  productSku?: string | null;
+  productUnit?: string | null;
   quantity: number;
   unitPrice: number;
   discount: number;

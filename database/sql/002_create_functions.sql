@@ -9,10 +9,10 @@ CREATE OR REPLACE FUNCTION app.set_context(
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  PERFORM set_config('app.user_id', COALESCE(p_user_id::text, ''), false);
-  PERFORM set_config('app.org_id', COALESCE(p_org_id::text, ''), false);
-  PERFORM set_config('app.member_id', COALESCE(p_member_id::text, ''), false);
-  PERFORM set_config('app.is_super_admin', CASE WHEN p_is_super_admin THEN 'true' ELSE 'false' END, false);
+  PERFORM set_config('app.user_id', COALESCE(p_user_id::text, ''), true);
+  PERFORM set_config('app.org_id', COALESCE(p_org_id::text, ''), true);
+  PERFORM set_config('app.member_id', COALESCE(p_member_id::text, ''), true);
+  PERFORM set_config('app.is_super_admin', CASE WHEN p_is_super_admin THEN 'true' ELSE 'false' END, true);
 END;
 $$;
 

@@ -9,5 +9,6 @@ export interface PurchaseOrderItemEntity {
   quantity: number;
   unitCost: number;
   totalCost: number;
+  expirationDate?: string | null;
   createdAt: string;
 }

@@ -21,6 +21,8 @@ interface PurchaseOrderRow {
   total_cost: string;
   notes: string | null;
   item_count: string;
+  first_product_name: string | null;
+  first_product_image: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -79,7 +81,16 @@ export class ListPurchaseOrdersUseCase {
                 po.subtotal, po.discount_total, po.tax_total, po.total_cost, po.notes,
                 po.created_at, po.updated_at,
                 (SELECT COUNT(*) FROM purchase_order_items poi
-                  WHERE poi.purchase_order_id = po.id) AS item_count
+                  WHERE poi.purchase_order_id = po.id) AS item_count,
+                (SELECT p.name FROM purchase_order_items poi2
+                  JOIN products p ON p.id = poi2.product_id
+                  WHERE poi2.purchase_order_id = po.id
+                  ORDER BY p.name LIMIT 1) AS first_product_name,
+                (SELECT CASE WHEN length(p.image_url) <= 500000 THEN p.image_url END
+                   FROM purchase_order_items poi3
+                   JOIN products p ON p.id = poi3.product_id
+                  WHERE poi3.purchase_order_id = po.id
+                  ORDER BY p.name LIMIT 1) AS first_product_image
          FROM purchase_orders po
          LEFT JOIN suppliers s ON s.id = po.supplier_id
          LEFT JOIN branches b ON b.id = po.branch_id
@@ -107,6 +118,8 @@ export class ListPurchaseOrdersUseCase {
       totalCost: toNumber(order.total_cost),
       notes: order.notes ?? null,
       itemCount: toNumber(order.item_count),
+      firstProductName: order.first_product_name ?? null,
+      firstProductImage: order.first_product_image ?? null,
       createdAt: order.created_at.toISOString(),
       updatedAt: order.updated_at.toISOString(),
     }));

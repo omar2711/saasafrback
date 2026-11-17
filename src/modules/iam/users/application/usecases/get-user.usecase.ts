@@ -18,7 +18,7 @@ export class GetUserUseCase {
         `SELECT u.id, u.email, u.full_name, u.phone, u.status, u.created_at, u.updated_at, u.deleted_at
          FROM users u
          JOIN org_members om ON om.user_id = u.id
-         WHERE u.id = $1 AND om.org_id = $2 AND om.deleted_at IS NULL
+         WHERE u.id = $1 AND om.org_id = $2 AND om.deleted_at IS NULL AND u.deleted_at IS NULL
          LIMIT 1`,
         [id, orgId],
       ),

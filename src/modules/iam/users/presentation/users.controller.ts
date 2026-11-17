@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { Tenant } from '../../../../common/decorators/tenant.decorator';
@@ -10,6 +10,7 @@ import { Permissions } from '../../../../common/decorators/permissions.decorator
 import { buildRlsContext } from '../../../../common/tenant/rls-context';
 import type { TenantContext } from '../../../../common/tenant/tenant-context';
 import { CreateUserUseCase } from '../application/usecases/create-user.usecase';
+import { DeleteUserUseCase } from '../application/usecases/delete-user.usecase';
 import { GetUserUseCase } from '../application/usecases/get-user.usecase';
 import { ListUsersUseCase } from '../application/usecases/list-users.usecase';
 import { SetUserStatusUseCase } from '../application/usecases/set-user-status.usecase';
@@ -30,6 +31,7 @@ export class UsersController {
     private readonly getUserUseCase: GetUserUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
     private readonly setUserStatusUseCase: SetUserStatusUseCase,
+    private readonly deleteUserUseCase: DeleteUserUseCase,
   ) {}
 
   @Post()
@@ -79,5 +81,17 @@ export class UsersController {
     @Body() dto: SetUserStatusDto,
   ) {
     return this.setUserStatusUseCase.execute(buildRlsContext(user, tenant), id, dto);
+  }
+
+  @Delete(':id')
+  @Permissions('users.write')
+  @ApiOperation({ summary: 'Eliminar usuario' })
+  async remove(
+    @CurrentUser() user: JwtUser,
+    @Tenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ) {
+    await this.deleteUserUseCase.execute(buildRlsContext(user, tenant), id);
+    return { ok: true };
   }
 }

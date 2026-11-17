@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNumber } from '../../../../../common/utils/numbers';
 import { QuoteEntity } from '../../domain/entities/quote.entity';
@@ -17,6 +17,12 @@ interface QuoteRow {
   tax_total: string;
   total: string;
   notes: string | null;
+  client_name: string | null;
+  client_phone: string | null;
+  client_email: string | null;
+  client_company: string | null;
+  client_nit: string | null;
+  client_address: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -28,6 +34,9 @@ interface QuoteItemRow {
   product_id: string | null;
   kit_id: string | null;
   kit_name: string | null;
+  product_name: string | null;
+  product_sku: string | null;
+  product_unit: string | null;
   quantity: string;
   unit_price: string;
   discount: string;
@@ -42,7 +51,9 @@ export class GetQuoteUseCase {
   async execute(context: RlsContext, quoteId: string): Promise<QuoteEntity> {
     const result = await this.db.withRls(context, async (client) => {
       const [quote] = await client.query<QuoteRow>(
-        `SELECT id, org_id, branch_id, customer_id, quote_number, status, valid_until, subtotal, discount_total, tax_total, total, notes, created_at, updated_at
+        `SELECT id, org_id, branch_id, customer_id, quote_number, status, valid_until, subtotal, discount_total, tax_total, total, notes,
+                client_name, client_phone, client_email, client_company, client_nit, client_address,
+                created_at, updated_at
          FROM quotes
          WHERE id = $1 AND deleted_at IS NULL`,
         [quoteId],
@@ -54,9 +65,11 @@ export class GetQuoteUseCase {
 
       const items = await client.query<QuoteItemRow>(
         `SELECT qi.id, qi.org_id, qi.quote_id, qi.product_id, qi.kit_id, k.name AS kit_name,
+                p.name AS product_name, p.sku AS product_sku, p.unit AS product_unit,
                 qi.quantity, qi.unit_price, qi.discount, qi.total, qi.created_at
          FROM quote_items qi
          LEFT JOIN kits k ON k.id = qi.kit_id
+         LEFT JOIN products p ON p.id = qi.product_id
          WHERE qi.quote_id = $1
          ORDER BY qi.created_at ASC`,
         [quoteId],
@@ -77,6 +90,9 @@ export class GetQuoteUseCase {
       productId: item.product_id,
       kitId: item.kit_id,
       kitName: item.kit_name,
+      productName: item.product_name,
+      productSku: item.product_sku,
+      productUnit: item.product_unit,
       quantity: toNumber(item.quantity),
       unitPrice: toNumber(item.unit_price),
       discount: toNumber(item.discount),
@@ -97,6 +113,12 @@ export class GetQuoteUseCase {
       taxTotal: toNumber(quote.tax_total),
       total: toNumber(quote.total),
       notes: quote.notes ?? null,
+      clientName: quote.client_name ?? null,
+      clientPhone: quote.client_phone ?? null,
+      clientEmail: quote.client_email ?? null,
+      clientCompany: quote.client_company ?? null,
+      clientNit: quote.client_nit ?? null,
+      clientAddress: quote.client_address ?? null,
       createdAt: quote.created_at.toISOString(),
       updatedAt: quote.updated_at.toISOString(),
       items,

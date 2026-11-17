@@ -1,4 +1,4 @@
-﻿import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNumber } from '../../../../../common/utils/numbers';
 import { PurchaseOrderEntity } from '../../domain/entities/purchase-order.entity';
@@ -35,6 +35,7 @@ interface PurchaseOrderItemRow {
   quantity: string;
   unit_cost: string;
   total_cost: string;
+  expiration_date: string | null;
   created_at: Date;
 }
 
@@ -103,19 +104,19 @@ export class CreatePurchaseOrderUseCase {
         let productId = item.productId;
         if (!productId) {
           const [newProduct] = await client.query<ProductIdRow>(
-            `INSERT INTO products (org_id, sku, name, category, sale_price, cost_price, unit, status)
-             VALUES ($1, $2, $3, $4, 0, $5, $6, 'pending_pricing')
+            `INSERT INTO products (org_id, sku, name, category, sale_price, cost_price, unit, image_url, status)
+             VALUES ($1, $2, $3, $4, 0, $5, $6, $7, 'pending_pricing')
              RETURNING id`,
-            [orgId, item.sku, item.productName, item.category ?? null, item.unitCost, item.unit ?? 'unidad'],
+            [orgId, item.sku, item.productName, item.category ?? null, item.unitCost, item.unit ?? 'unidad', item.image ?? null],
           );
           productId = newProduct.id;
         }
 
         const [created] = await client.query<PurchaseOrderItemRow>(
-          `INSERT INTO purchase_order_items (org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING id, org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost, created_at`,
-          [orgId, order.id, productId, item.quantity, item.unitCost, item.totalCost],
+          `INSERT INTO purchase_order_items (org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost, expiration_date)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::date)
+           RETURNING id, org_id, purchase_order_id, product_id, quantity, unit_cost, total_cost, to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date, created_at`,
+          [orgId, order.id, productId, item.quantity, item.unitCost, item.totalCost, item.expirationDate ?? null],
         );
 
         items.push({
@@ -126,6 +127,7 @@ export class CreatePurchaseOrderUseCase {
           quantity: toNumber(created.quantity),
           unitCost: toNumber(created.unit_cost),
           totalCost: toNumber(created.total_cost),
+          expirationDate: created.expiration_date ?? null,
           createdAt: created.created_at.toISOString(),
         });
       }

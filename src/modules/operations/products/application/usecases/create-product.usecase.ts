@@ -1,4 +1,4 @@
-﻿import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { DbService, RlsContext } from '../../../../../database/db.service';
 import { toNullableNumber, toNumber } from '../../../../../common/utils/numbers';
 import { ProductEntity } from '../../domain/entities/product.entity';
@@ -18,6 +18,7 @@ interface ProductRow {
   max_sale_price: string | null;
   unit: string | null;
   image_url: string | null;
+  expiration_date: string | null;
   status: string;
   created_at: Date;
   updated_at: Date;
@@ -36,12 +37,12 @@ export class CreateProductUseCase {
     const result = await this.db
       .withRls(context, async (client) => {
       const [product] = await client.query<ProductRow>(
-        `INSERT INTO products (org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status)
+        `INSERT INTO products (org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status, expiration_date)
          VALUES (
            $1, $2, $3,
            COALESCE((SELECT name FROM product_categories WHERE id = $4::uuid AND org_id = $1), $5),
-           $4::uuid, $6, $7, $8, $11, $12, $9, $10, 'active')
-         RETURNING id, org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status, created_at, updated_at`,
+           $4::uuid, $6, $7, $8, $11, $12, $9, $10, 'active', $13::date)
+         RETURNING id, org_id, sku, name, category, category_id, description, sale_price, cost_price, min_sale_price, max_sale_price, unit, image_url, status, to_char(expiration_date, 'YYYY-MM-DD') AS expiration_date, created_at, updated_at`,
         [
           orgId,
           dto.sku,
@@ -55,6 +56,7 @@ export class CreateProductUseCase {
           dto.image ?? null,
           dto.minSalePrice ?? null,
           dto.maxSalePrice ?? null,
+          dto.expirationDate ?? null,
         ],
       );
 
@@ -94,6 +96,7 @@ export class CreateProductUseCase {
       maxSalePrice: toNullableNumber(result.max_sale_price),
       unit: result.unit ?? null,
       imageUrl: result.image_url ?? null,
+      expirationDate: result.expiration_date ?? null,
       status: result.status as ProductEntity['status'],
       createdAt: result.created_at.toISOString(),
       updatedAt: result.updated_at.toISOString(),

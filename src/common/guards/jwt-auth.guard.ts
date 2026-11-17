@@ -11,6 +11,7 @@ import { Request } from 'express';
 import { JwtUser } from '../auth/jwt-user';
 import { resolveIsSuperAdmin } from '../auth/super-admin';
 import { DbService } from '../../database/db.service';
+import { TtlCache } from '../cache/ttl-cache';
 
 type RequestWithUser = Request & {
   user?: JwtUser;
@@ -22,6 +23,12 @@ interface JwtPayload {
   email?: string;
   sessionId?: string;
 }
+
+// Rol de plataforma (30 s) y estado de sesión (10 s): evitan 2 consultas por petición.
+const accountCache = new TtlCache<
+  { platform_role: 'super_admin' | 'accountant' | null }[]
+>(30_000);
+const sessionCache = new TtlCache<SessionStateRow[]>(10_000);
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -52,13 +59,17 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const configuredAdmin = resolveIsSuperAdmin(payload, this.configService);
-    const [account] = await this.db.withContextQuery<
-      { platform_role: 'super_admin' | 'accountant' | null }[]
-    >(payload.sub, null, configuredAdmin, (c) =>
-      c.query(
-        'SELECT platform_role FROM users WHERE id=$1 AND deleted_at IS NULL',
-        [payload.sub],
-      ),
+    const [account] = await accountCache.get(
+      `${payload.sub}:${configuredAdmin}`,
+      () =>
+        this.db.withContextQuery<
+          { platform_role: 'super_admin' | 'accountant' | null }[]
+        >(payload.sub, null, configuredAdmin, (c) =>
+          c.query(
+            'SELECT platform_role FROM users WHERE id=$1 AND deleted_at IS NULL',
+            [payload.sub],
+          ),
+        ),
     );
     const platformRole =
       account?.platform_role ?? (configuredAdmin ? 'super_admin' : null);
@@ -99,7 +110,7 @@ export class JwtAuthGuard implements CanActivate {
     payload: JwtPayload,
     isSuperAdmin: boolean,
   ): Promise<void> {
-    const rows = await this.db.withContextQuery<SessionStateRow[]>(
+    const rows = await sessionCache.get(`${payload.sub}:${payload.sessionId ?? ""}:${isSuperAdmin}`, () => this.db.withContextQuery<SessionStateRow[]>(
       payload.sub,
       null,
       isSuperAdmin,
@@ -114,7 +125,7 @@ export class JwtAuthGuard implements CanActivate {
            WHERE u.id = $1::uuid`,
           [payload.sub, payload.sessionId ?? null],
         ),
-    );
+    ));
 
     const state = rows[0];
     if (!state || state.user_deleted || state.user_status !== 'active') {

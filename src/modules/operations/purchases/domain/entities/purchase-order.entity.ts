@@ -28,6 +28,8 @@ export interface PurchaseOrderEntity {
   totalCost: number;
   notes?: string | null;
   itemCount?: number;
+  firstProductName?: string | null;
+  firstProductImage?: string | null;
   createdAt: string;
   updatedAt: string;
   items?: PurchaseOrderItemEntity[];

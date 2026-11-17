@@ -1,4 +1,4 @@
-﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsIn,
@@ -40,6 +40,11 @@ class CreatePurchaseOrderItemDto {
   @IsString()
   unit?: string;
 
+  @ApiPropertyOptional({ description: 'Imagen del producto en formato Data URL' })
+  @IsOptional()
+  @IsString()
+  image?: string;
+
   @ApiProperty({ example: 5 })
   @IsNumber()
   @Min(0.01)
@@ -49,6 +54,12 @@ class CreatePurchaseOrderItemDto {
   @IsNumber()
   @Min(0)
   unitCost: number;
+
+  @ApiPropertyOptional({ example: '2027-03-31', description: 'Fecha de vencimiento (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'expirationDate must be YYYY-MM-DD' })
+  expirationDate?: string;
 }
 
 export class CreatePurchaseOrderDto {

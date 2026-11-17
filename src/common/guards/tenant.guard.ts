@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { DbService } from '../../database/db.service';
+import { TtlCache } from '../cache/ttl-cache';
 import { JwtUser } from '../auth/jwt-user';
 import { TenantContext } from '../tenant/tenant-context';
 import { isUuid } from '../utils/uuid';
@@ -22,6 +23,11 @@ interface MembershipRow {
 interface FeatureRow {
   feature_code: string;
 }
+
+// Estado de la organización (30 s), membresía y permisos (15 s) y plan (60 s).
+const orgCache = new TtlCache<{ status: string }[]>(30_000);
+const membershipCache = new TtlCache<MembershipRow[]>(15_000);
+const featureCache = new TtlCache<FeatureRow[]>(60_000);
 
 @Injectable()
 export class TenantGuard implements CanActivate {
@@ -60,7 +66,7 @@ export class TenantGuard implements CanActivate {
     const isSuperAdmin = request.user.isSuperAdmin ?? false;
 
     if (!isSuperAdmin) {
-      const [org] = await this.db.withContextQuery<{ status: string }[]>(
+      const [org] = await orgCache.get(orgId, () => this.db.withContextQuery<{ status: string }[]>(
         userId,
         orgId,
         false,
@@ -69,7 +75,7 @@ export class TenantGuard implements CanActivate {
             'SELECT status FROM orgs WHERE id=$1 AND deleted_at IS NULL',
             [orgId],
           ),
-      );
+      ));
       if (!org || org.status !== 'active')
         throw new ForbiddenException(
           'La organización está suspendida o no está disponible.',
@@ -78,7 +84,7 @@ export class TenantGuard implements CanActivate {
 
     let rows: MembershipRow[];
     try {
-      rows = await this.db.withContextQuery<MembershipRow[]>(
+      rows = await membershipCache.get(`${orgId}:${userId}:${isSuperAdmin}`, () => this.db.withContextQuery<MembershipRow[]>(
         userId,
         orgId,
         isSuperAdmin,
@@ -94,7 +100,7 @@ export class TenantGuard implements CanActivate {
              WHERE om.org_id = $1 AND om.user_id = $2 AND om.deleted_at IS NULL AND om.status = 'active'`,
             [orgId, userId],
           ),
-      );
+      ));
     } catch (err) {
       console.error('[TenantGuard] DB error querying membership:', err);
       throw err;
@@ -138,7 +144,7 @@ export class TenantGuard implements CanActivate {
     }
 
     try {
-      const featureRows = await this.db.withContextQuery<FeatureRow[]>(
+      const featureRows = await featureCache.get(orgId, () => this.db.withContextQuery<FeatureRow[]>(
         userId,
         orgId,
         isSuperAdmin,
@@ -156,7 +162,7 @@ export class TenantGuard implements CanActivate {
                AND s.deleted_at IS NULL`,
             [orgId],
           ),
-      );
+      ));
       request.planFeatures = featureRows.map((r) => r.feature_code);
     } catch {
       request.planFeatures = [];

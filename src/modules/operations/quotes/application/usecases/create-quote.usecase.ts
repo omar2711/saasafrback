@@ -10,6 +10,7 @@ import { toNumber } from '../../../../../common/utils/numbers';
 import { resolveKitPricing } from '../../../sales/application/sale-stock-helpers';
 import { QuoteEntity } from '../../domain/entities/quote.entity';
 import { QuoteItemEntity } from '../../domain/entities/quote-item.entity';
+import { normalizeTaxId } from '../../../customers/application/customer-helpers';
 import { CreateQuoteDto } from '../../presentation/dto/create-quote.dto';
 
 interface ProductPriceRow {
@@ -156,7 +157,41 @@ export class CreateQuoteUseCase {
     const taxTotal = dto.taxTotal ?? 0;
     const total = subtotal - discountTotal + taxTotal;
 
+    const taxId = normalizeTaxId(dto.clientNit);
+
     const result = await this.db.withRls(context, async (client) => {
+      // Cliente por CI/NIT (unico por organizacion): si ya existe se enlaza a la
+      // cotizacion; si no, se crea con los datos escritos para la proxima vez.
+      let customerId: string | null = dto.customerId ?? null;
+      if (!customerId && taxId) {
+        const findByTaxId = async () => {
+          const [row] = await client.query<{ id: string }>(
+            `SELECT id FROM customers WHERE org_id = $1 AND tax_id = $2 AND deleted_at IS NULL`,
+            [orgId, taxId],
+          );
+          return row?.id ?? null;
+        };
+        customerId = await findByTaxId();
+        if (!customerId && dto.clientName?.trim()) {
+          const [made] = await client.query<{ id: string }>(
+            `INSERT INTO customers (org_id, name, tax_id, email, phone, address, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'active')
+             ON CONFLICT (org_id, tax_id) WHERE deleted_at IS NULL AND tax_id IS NOT NULL DO NOTHING
+             RETURNING id`,
+            [
+              orgId,
+              dto.clientName.trim(),
+              taxId,
+              dto.clientEmail?.trim() || null,
+              dto.clientPhone?.trim() || null,
+              dto.clientAddress?.trim() || null,
+            ],
+          );
+          // Si otra peticion lo creo justo antes, DO NOTHING no devuelve fila.
+          customerId = made?.id ?? (await findByTaxId());
+        }
+      }
+
       const [quote] = await client.query<QuoteRow>(
         `INSERT INTO quotes (
            org_id,
@@ -182,7 +217,7 @@ export class CreateQuoteUseCase {
         [
           orgId,
           dto.branchId,
-          dto.customerId ?? null,
+          customerId,
           dto.quoteNumber,
           dto.status ?? 'pending',
           dto.validUntil ? new Date(dto.validUntil) : null,
@@ -195,10 +230,19 @@ export class CreateQuoteUseCase {
           dto.clientPhone ?? null,
           dto.clientEmail ?? null,
           dto.clientCompany ?? null,
-          dto.clientNit ?? null,
+          taxId,
           dto.clientAddress ?? null,
         ],
       );
+
+      const kitNames = new Map<string, string>();
+      if (kitIds.length > 0) {
+        const kits = await client.query<{ id: string; name: string }>(
+          `SELECT id, name FROM kits WHERE id = ANY($1::uuid[])`,
+          [kitIds],
+        );
+        for (const k of kits) kitNames.set(k.id, k.name);
+      }
 
       const items: QuoteItemEntity[] = [];
       for (const item of itemsInput) {
@@ -224,6 +268,8 @@ export class CreateQuoteUseCase {
           quoteId: created.quote_id,
           productId: created.product_id,
           kitId: created.kit_id,
+          productName: created.product_id ? (rangeMap.get(created.product_id)?.name ?? null) : null,
+          kitName: created.kit_id ? (kitNames.get(created.kit_id) ?? null) : null,
           quantity: toNumber(created.quantity),
           unitPrice: toNumber(created.unit_price),
           discount: toNumber(created.discount),
